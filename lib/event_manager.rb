@@ -1,5 +1,7 @@
 require "csv"
 require "erb"
+require "time"
+require "date"
 require "google/apis/civicinfo_v2"
 
 def clean_zipcode(zip)
@@ -39,6 +41,12 @@ def save_thank_you_letter(id, form_letter)
   end
 end
 
+def clean_datetime(date)
+  Time.strptime(date, "%m/%d/%y %H:%M")
+
+  # parsed_datetime.strftime("%Y-%m-%d %H:%M:%S")
+end
+
 puts "EventManager initialized."
 
 contents = CSV.open(
@@ -50,6 +58,8 @@ contents = CSV.open(
 template_letter = File.read("form_letter.erb")
 erb_template = ERB.new(template_letter)
 
+peak_registration_hours = []
+
 contents.each do |row|
   # "first_name" and "legislators" are called in the "erb_template"
   id = row[0]
@@ -57,9 +67,22 @@ contents.each do |row|
   zipcode = clean_zipcode(row[:zipcode])
   legislators = legislators_by_zipcode(zipcode)
 
-  # phone_number has been formatted below
-  # phone_number = clean_phone_number(row[:homephone])
+  # ----------project assignments start here------------
+  phone_number = clean_phone_number(row[:homephone])
+  regrex_date = clean_datetime(row[:regdate])
+
+  # ---------peak peak_registration_hours----------
+  registration_hour = regrex_date.strftime("%H")
+  peak_registration_hours.push(registration_hour)
+
+  # ---------peak peak_registration_days----------
+  registration_day = regrex_date.wday # => interger
+  registration_day_method2 = regrex_date.strftime("%A") # => string ie "Monday"
+
+  # ----------project assignments end's here------------
 
   form_letter = erb_template.result(binding)
   save_thank_you_letter(id, form_letter)
 end
+
+puts peak_registration_hours.inspect
